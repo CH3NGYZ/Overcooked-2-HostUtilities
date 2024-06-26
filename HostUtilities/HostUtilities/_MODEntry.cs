@@ -18,11 +18,11 @@ using Version = System.Version;
 
 namespace HostUtilities
 {
-    [BepInPlugin("com.ch3ngyz.plugin.HostUtilities", "[HostUtilities] By.易程不变 Q群860480677 点击下方“‧‧‧”展开", "1.0.87")]
+    [BepInPlugin("com.ch3ngyz.plugin.HostUtilities", "[HostUtilities] By.易程不变 Q群860480677 点击下方“‧‧‧”展开", "1.0.88")]
     [BepInProcess("Overcooked2.exe")]
     public class MODEntry : BaseUnityPlugin
     {
-        public static string Version = "1.0.87";
+        public static string Version = "1.0.88";
         public static Harmony HarmonyInstance { get; set; }
         public static Dictionary<string, Harmony> AllHarmony = new Dictionary<string, Harmony>();
         public static string modName;
@@ -38,8 +38,7 @@ namespace HostUtilities
         public static bool isSelectedAndPlay = false;
         public static bool isAuthor = false;
         public static CSteamID CurrentSteamID;
-        private static Harmony patcher;
-        public static Server localServer = null;
+
         public void Awake()
         {
             try
@@ -67,17 +66,13 @@ namespace HostUtilities
                 QuitInLoadingScreen.Awake();
                 RestartLevel.Awake();
                 ScaleObject.Awake();
+                LatencyHelper.Awake();
                 SkipLevel.Awake();
                 UI_DisplayModName.Awake();
                 UI_DisplayModsOnResultsScreen.Awake();
                 UI_DisplayKickedUser.Awake();
                 UI_DisplayLatency.Awake();
-                // 创建Harmony实例
-                patcher = new Harmony("com.ch3ngyz.plugin.HostUtilities");
 
-                // 单独调用必要的补丁方法
-                ServerMessengerPatch.Patch(patcher);
-                MailboxPatch.Patch(patcher);
 
                 HarmonyInstance = Harmony.CreateAndPatchAll(MethodBase.GetCurrentMethod().DeclaringType);
                 AllHarmony[MethodBase.GetCurrentMethod().DeclaringType.Name] = HarmonyInstance;
@@ -106,6 +101,7 @@ namespace HostUtilities
                 QuitInLoadingScreen.Update();
                 RestartLevel.Update();
                 ScaleObject.Update();
+                LatencyHelper.Update();
                 SkipLevel.Update();
                 ToggleArtLight.Update();
                 UI_DisplayKickedUser.Update();
@@ -260,7 +256,7 @@ namespace HostUtilities
                 {
                     CurrentSteamID = SteamUser.GetSteamID();
                     LogError("CurrentSteamID: " + CurrentSteamID.m_SteamID);
-                    if (MODEntry.CurrentSteamID.m_SteamID.Equals(76561199191224186) && !isAuthor)
+                    if (CurrentSteamID.m_SteamID.Equals(76561199191224186) && !isAuthor)
                     {
                         isAuthor = true;
                         ModifyMaxActiveOrders.Awake();
@@ -323,60 +319,6 @@ namespace HostUtilities
                 }
                 skipFirstCheck = true;
             }
-        }
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(Message), "Deserialise")]
-        public static bool MessageDeserialisePatch(BitStreamReader reader, Message __instance, ref bool __result, ref bool __runOriginal)
-        {
-            if (!__runOriginal) return false;
-            var messageType = (MessageType)reader.ReadByteAhead(8);
-            if (messageType == UI_DisplayLatency.UsersMessageType)
-            {
-                __instance.Type = (MessageType)reader.ReadByte(8);
-                __instance.Payload = new UsersMessage(new List<UserConnectionInfo>());
-                __instance.Payload.Deserialise(reader);
-                __result = true;
-                return false;
-            }
-            return true;
-        }
-        public static class ServerMessengerPatch
-        {
-            public static void Patch(Harmony harmony)
-            {
-                harmony.Patch(AccessTools.Method("ServerMessenger:OnServerStarted"), null, new HarmonyMethod(typeof(ServerMessengerPatch).GetMethod("PostfixStarted")));
-                harmony.Patch(AccessTools.Method("ServerMessenger:OnServerStopped"), null, new HarmonyMethod(typeof(ServerMessengerPatch).GetMethod("PostfixStopped")));
-            }
-
-            public static void PostfixStarted(Server server)
-            {
-                MODEntry.localServer = server;
-            }
-            public static void PostfixStopped()
-            {
-                MODEntry.localServer = null;
-            }
-
-
-        }
-        public static class MailboxPatch
-        {
-            public static void Patch(Harmony harmony)
-            {
-                harmony.Patch(AccessTools.Method("Mailbox:OnMessageReceived"), new HarmonyMethod(typeof(MailboxPatch).GetMethod("Prefix")), null);
-            }
-            public static bool Prefix(MessageType type, Serialisable message)
-            {
-                if (type == UI_DisplayLatency.UsersMessageType)
-                {
-                    UsersMessage usersMessage = (UsersMessage)message;
-                    UI_DisplayLatency.OnUsersMessage(usersMessage);
-                    return false;
-                }
-                return true;
-
-            }
-
         }
     }
 
