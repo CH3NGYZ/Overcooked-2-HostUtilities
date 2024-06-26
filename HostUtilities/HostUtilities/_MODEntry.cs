@@ -10,7 +10,11 @@ using Team17.Online;
 using UnityEngine;
 using UnityEngine.Networking;
 using SimpleJSON;
+using Team17.Online.Multiplayer;
+using BitStream;
+using Team17.Online.Multiplayer.Messaging;
 using Version = System.Version;
+
 
 namespace HostUtilities
 {
@@ -34,7 +38,8 @@ namespace HostUtilities
         public static bool isSelectedAndPlay = false;
         public static bool isAuthor = false;
         public static CSteamID CurrentSteamID;
-
+        private static Harmony patcher;
+        public static Server localServer = null;
         public void Awake()
         {
             try
@@ -67,6 +72,12 @@ namespace HostUtilities
                 UI_DisplayModsOnResultsScreen.Awake();
                 UI_DisplayKickedUser.Awake();
                 UI_DisplayLatency.Awake();
+                // 创建Harmony实例
+                patcher = new Harmony("com.ch3ngyz.plugin.HostUtilities");
+
+                // 单独调用必要的补丁方法
+                ServerMessengerPatch.Patch(patcher);
+                MailboxPatch.Patch(patcher);
 
                 HarmonyInstance = Harmony.CreateAndPatchAll(MethodBase.GetCurrentMethod().DeclaringType);
                 AllHarmony[MethodBase.GetCurrentMethod().DeclaringType.Name] = HarmonyInstance;
@@ -313,7 +324,62 @@ namespace HostUtilities
                 skipFirstCheck = true;
             }
         }
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Message), "Deserialise")]
+        public static bool MessageDeserialisePatch(BitStreamReader reader, Message __instance, ref bool __result, ref bool __runOriginal)
+        {
+            if (!__runOriginal) return false;
+            var messageType = (MessageType)reader.ReadByteAhead(8);
+            if (messageType == UI_DisplayLatency.UsersMessageType)
+            {
+                __instance.Type = (MessageType)reader.ReadByte(8);
+                __instance.Payload = new UsersMessage(new List<UserConnectionInfo>());
+                __instance.Payload.Deserialise(reader);
+                __result = true;
+                return false;
+            }
+            return true;
+        }
+        public static class ServerMessengerPatch
+        {
+            public static void Patch(Harmony harmony)
+            {
+                harmony.Patch(AccessTools.Method("ServerMessenger:OnServerStarted"), null, new HarmonyMethod(typeof(ServerMessengerPatch).GetMethod("PostfixStarted")));
+                harmony.Patch(AccessTools.Method("ServerMessenger:OnServerStopped"), null, new HarmonyMethod(typeof(ServerMessengerPatch).GetMethod("PostfixStopped")));
+            }
+
+            public static void PostfixStarted(Server server)
+            {
+                MODEntry.localServer = server;
+            }
+            public static void PostfixStopped()
+            {
+                MODEntry.localServer = null;
+            }
+
+
+        }
+        public static class MailboxPatch
+        {
+            public static void Patch(Harmony harmony)
+            {
+                harmony.Patch(AccessTools.Method("Mailbox:OnMessageReceived"), new HarmonyMethod(typeof(MailboxPatch).GetMethod("Prefix")), null);
+            }
+            public static bool Prefix(MessageType type, Serialisable message)
+            {
+                if (type == UI_DisplayLatency.UsersMessageType)
+                {
+                    UsersMessage usersMessage = (UsersMessage)message;
+                    UI_DisplayLatency.OnUsersMessage(usersMessage);
+                    return false;
+                }
+                return true;
+
+            }
+
+        }
     }
+
 
     public class VersionCheckClass : MonoBehaviour
     {
@@ -528,5 +594,40 @@ namespace HostUtilities
             dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
             return dtDateTime;
         }
+    }
+    public static class BitStreamReaderExtension
+    {
+        private static readonly FieldInfo fieldInfo_bufferLengthInBits = AccessTools.Field(typeof(BitStreamReader), "_bufferLengthInBits");
+        private static readonly FieldInfo fieldInfo_cbitsInPartialByte = AccessTools.Field(typeof(BitStreamReader), "_cbitsInPartialByte");
+        private static readonly FieldInfo fieldInfo_partialByte = AccessTools.Field(typeof(BitStreamReader), "_partialByte");
+        private static readonly FieldInfo fieldInfo_byteArray = AccessTools.Field(typeof(BitStreamReader), "_byteArray");
+        private static readonly FieldInfo fieldInfo_byteArrayIndex = AccessTools.Field(typeof(BitStreamReader), "_byteArrayIndex");
+
+        public static byte ReadByteAhead(this BitStreamReader instance, int countOfBits)
+        {
+            if (instance.EndOfStream) return 0;
+            if (countOfBits > 8 || countOfBits <= 0) return 0;
+            if ((long)countOfBits > (long)(ulong)(uint)fieldInfo_bufferLengthInBits.GetValue(instance)) return 0;
+            byte b;
+
+            int cbitsInPartialByte = (int)fieldInfo_cbitsInPartialByte.GetValue(instance);
+            byte partialByte = (byte)fieldInfo_partialByte.GetValue(instance);
+            if (cbitsInPartialByte >= countOfBits)
+            {
+                int num = 8 - countOfBits;
+                b = (byte)(partialByte >> num);
+            }
+            else
+            {
+                byte[] byteArray = (byte[])fieldInfo_byteArray.GetValue(instance);
+                byte b2 = byteArray[(int)fieldInfo_byteArrayIndex.GetValue(instance)];
+                int num2 = 8 - countOfBits;
+                b = (byte)(partialByte >> num2);
+                int num3 = num2 + cbitsInPartialByte;
+                b |= (byte)(b2 >> num3);
+            }
+            return b;
+        }
+
     }
 }
