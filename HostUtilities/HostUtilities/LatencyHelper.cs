@@ -12,6 +12,7 @@ using Steamworks;
 using Team17.Online.Multiplayer.Connection;
 using Team17.Online;
 using UnityEngine;
+using System.Text.RegularExpressions;
 
 
 namespace HostUtilities
@@ -123,7 +124,7 @@ namespace HostUtilities
                         {
                             if (info.SteamId == (CSteamID)MODEntry.CurrentSteamID.m_SteamID)
                             {
-                                serverFriendsMessage += $"{user.DisplayName} {isfriendMessage} {i + 1}号位 {(info.Latency == 0 ? "获取错误" : (info.Latency * 1000 * 2).ToString("000"))} ms\n";
+                                serverFriendsMessage += $"{(UI_DisplayLatency.simplifyLatency.Value == true ? "" : user.DisplayName.RemoveAllTags())} {isfriendMessage} {i + 1}号位 {(info.Latency == 0 ? "获取错误" : (info.Latency * 1000 * 2).ToString("000"))} ms\n";
                                 break;
                             }
                         }
@@ -144,7 +145,7 @@ namespace HostUtilities
                                 else
                                 {
                                     // 其他两位
-                                    serverFriendsMessage += $"{info.DisplayName} {isfriendMessage} {i + 1}号位 {(info.Latency == 0 ? "获取错误" : (info.Latency * 1000 * 2).ToString("000"))} ms\n";
+                                    serverFriendsMessage += $"{(UI_DisplayLatency.simplifyLatency.Value == true ? "" : info.DisplayName.RemoveAllTags())} {isfriendMessage} {i + 1}号位 {(info.Latency == 0 ? "获取错误" : (info.Latency * 1000 * 2).ToString("000"))} ms\n";
                                     break;
                                 }
                             }
@@ -170,6 +171,7 @@ namespace HostUtilities
             }
             return true;
         }
+
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ServerMessenger), "OnServerStarted")]
@@ -215,10 +217,10 @@ namespace HostUtilities
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(ClientUserSystem), "OnUsersChanged")]
+        [HarmonyPatch(typeof(ClientUserSystem), "AddUser")]
         public static void ClientUserSystem_OnUsersChanged_Postfix()
         {
-            //Log("ClientUserSystem_OnUsersChanged");
+            Log("ClientUserSystem_OnUsersChanged");
             clientFriendsMessage = string.Empty;
             FastList<User> clientUserSystem = ClientUserSystem.m_Users;
             for (int i = 0; i < clientUserSystem.Count; i++)
@@ -236,7 +238,7 @@ namespace HostUtilities
                     string nickname = SteamFriends.GetPlayerNickname(csteamID);
                     string nicknamePart = string.IsNullOrEmpty(nickname) ? "" : $" [{nickname}]";
                     string isfriendMessage = $"(好友 {personaName}{nicknamePart})";
-                    clientFriendsMessage += $"{user.DisplayName} {isfriendMessage} {i + 1}号位\n";
+                    clientFriendsMessage += $"{(UI_DisplayLatency.simplifyLatency.Value == true ? "" : user.DisplayName.RemoveAllTags())} {isfriendMessage} {i + 1}号位\n";
                 }
                 //else
                 //{
@@ -245,7 +247,34 @@ namespace HostUtilities
             }
         }
     }
+    public static class BitStreamReader_ReadByteAhead
+    {
+        public static byte ReadByteAhead(this BitStreamReader instance, int countOfBits)
+        {
+            if (instance.EndOfStream) return 0;
+            if (countOfBits > 8 || countOfBits <= 0) return 0;
+            if (countOfBits > instance._bufferLengthInBits) return 0;
+            byte b;
 
+            int cbitsInPartialByte = instance._cbitsInPartialByte;
+            byte partialByte = instance._partialByte;
+            if (cbitsInPartialByte >= countOfBits)
+            {
+                int num = 8 - countOfBits;
+                b = (byte)(partialByte >> num);
+            }
+            else
+            {
+                byte[] byteArray = instance._byteArray;
+                byte b2 = byteArray[instance._byteArrayIndex];
+                int num2 = 8 - countOfBits;
+                b = (byte)(partialByte >> num2);
+                int num3 = num2 + cbitsInPartialByte;
+                b |= (byte)(b2 >> num3);
+            }
+            return b;
+        }
+    }
 
     public class UsersMessage : Serialisable
     {
@@ -295,6 +324,21 @@ namespace HostUtilities
             DisplayName = displayName;
             Latency = latency;
             SteamId = steamId;
+        }
+    }
+
+    public static class StringExtensions
+    {
+        public static string RemoveAllTags(this string input)
+        {
+            if (string.IsNullOrEmpty(input))
+            {
+                return input;
+            }
+            string pattern = "<.*?>";
+            string replacement = "";
+            string result = Regex.Replace(input, pattern, replacement);
+            return result;
         }
     }
 }

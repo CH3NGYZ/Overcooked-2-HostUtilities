@@ -86,7 +86,7 @@ namespace HostUtilities
 
         [HarmonyPatch(typeof(User), "DisplayName", MethodType.Setter)]
         [HarmonyPrefix]
-        public static void DisplayNameSetterPrefix(ref string value, User __instance)
+        public static void DisplayName_Setter_Prefix(ref string value, User __instance)
         {
             try
             {

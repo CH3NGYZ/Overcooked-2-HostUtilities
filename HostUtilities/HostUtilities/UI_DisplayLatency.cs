@@ -22,13 +22,15 @@ namespace HostUtilities
         private static MyOnScreenDebugDisplay onScreenDebugDisplay;
         private static NetworkStateDebugDisplay NetworkDebugUI = null;
         public static ConfigEntry<bool> ShowEnabled;
-        public static ConfigEntry<bool> isShowDebugInfo;
+        //public static ConfigEntry<bool> isShowDebugInfo;
         public static bool canAdd;
+        public static ConfigEntry<bool> simplifyLatency;
 
         public static void Awake()
         {
             ShowEnabled = MODEntry.Instance.Config.Bind<bool>("00-UI", "03-01-屏幕右上角显示延迟", true);
-            isShowDebugInfo = MODEntry.Instance.Config.Bind<bool>("00-UI", "04-屏幕右上角增加显示调试信息", false);
+            simplifyLatency = MODEntry.Instance.Config.Bind<bool>("00-UI", "03-02-简略延迟", false);
+            //isShowDebugInfo = MODEntry.Instance.Config.Bind<bool>("00-UI", "04-屏幕右上角增加显示调试信息", false);
             canAdd = false;
             onScreenDebugDisplay = new MyOnScreenDebugDisplay();
             onScreenDebugDisplay.Awake();
@@ -130,52 +132,52 @@ namespace HostUtilities
 
             public override void OnDraw(ref Rect rect, GUIStyle style)
             {
-                if (isShowDebugInfo.Value)
-                {
-                    string text = string.Empty;
-                    string text2 = string.Empty;
-                    if (ConnectionModeSwitcher.GetRequestedConnectionState() == NetConnectionState.Server)
-                    {
-                        ServerOptions serverOptions = (ServerOptions)ConnectionModeSwitcher.GetAgentData();
-                        text = ", visibility: " + serverOptions.visibility.ToString();
-                        text2 = ", gameMode: " + serverOptions.gameMode.ToString();
-                    }
-                    else if (ConnectionModeSwitcher.GetRequestedConnectionState() == NetConnectionState.Matchmake)
-                    {
-                        MatchmakeData matchmakeData = (MatchmakeData)ConnectionModeSwitcher.GetAgentData();
-                        if (ConnectionStatus.IsHost())
-                        {
-                            text = ",HostgameMode: " + OnlineMultiplayerSessionVisibility.eMatchmaking;
-                        }
-                        text2 = ",ClientgameMode: " + matchmakeData.gameMode.ToString();
-                    }
-                    DrawText(ref rect, style, string.Concat(new string[]
-                    {
-                    "RequestedConnectionState: ",
-                    ConnectionModeSwitcher.GetRequestedConnectionState().ToString(),
-                    text,
-                    text2,
-                    ",Progress: ",
-                    ConnectionModeSwitcher.GetStatus().GetProgress().ToString(),
-                    " Result: ",
-                    ConnectionModeSwitcher.GetStatus().GetResult().ToString()
-                    }));
+                //if (isShowDebugInfo.Value)
+                //{
+                //    string text = string.Empty;
+                //    string text2 = string.Empty;
+                //    if (ConnectionModeSwitcher.GetRequestedConnectionState() == NetConnectionState.Server)
+                //    {
+                //        ServerOptions serverOptions = (ServerOptions)ConnectionModeSwitcher.GetAgentData();
+                //        text = ", visibility: " + serverOptions.visibility.ToString();
+                //        text2 = ", gameMode: " + serverOptions.gameMode.ToString();
+                //    }
+                //    else if (ConnectionModeSwitcher.GetRequestedConnectionState() == NetConnectionState.Matchmake)
+                //    {
+                //        MatchmakeData matchmakeData = (MatchmakeData)ConnectionModeSwitcher.GetAgentData();
+                //        if (ConnectionStatus.IsHost())
+                //        {
+                //            text = ",HostgameMode: " + OnlineMultiplayerSessionVisibility.eMatchmaking;
+                //        }
+                //        text2 = ",ClientgameMode: " + matchmakeData.gameMode.ToString();
+                //    }
+                //    DrawText(ref rect, style, string.Concat(new string[]
+                //    {
+                //    "RequestedConnectionState: ",
+                //    ConnectionModeSwitcher.GetRequestedConnectionState().ToString(),
+                //    text,
+                //    text2,
+                //    ",Progress: ",
+                //    ConnectionModeSwitcher.GetStatus().GetProgress().ToString(),
+                //    " Result: ",
+                //    ConnectionModeSwitcher.GetStatus().GetResult().ToString()
+                //    }));
 
-                    //LobbyInfo
-                    string Lobbymessage = "NotInLobby";
-                    if (ClientLobbyFlowController.Instance != null)
-                    {
-                        Lobbymessage = ClientLobbyFlowController.Instance.m_state.ToString();
-                    }
-                    DrawText(ref rect, style, string.Concat(new string[]
-                    {
-                    "LobbyState: ",
-                    Lobbymessage,
-                    ",joinCode: ",
-                    ForceHost.joinReturnCode
-                    }));
-                    DrawText(ref rect, style, ClientGameSetup.Mode + ", time: " + ClientTime.Time().ToString("00000.000"));
-                }
+                //    //LobbyInfo
+                //    string Lobbymessage = "NotInLobby";
+                //    if (ClientLobbyFlowController.Instance != null)
+                //    {
+                //        Lobbymessage = ClientLobbyFlowController.Instance.m_state.ToString();
+                //    }
+                //    DrawText(ref rect, style, string.Concat(new string[]
+                //    {
+                //    "LobbyState: ",
+                //    Lobbymessage,
+                //    ",joinCode: ",
+                //    ForceHost.joinReturnCode
+                //    }));
+                //    DrawText(ref rect, style, ClientGameSetup.Mode + ", time: " + ClientTime.Time().ToString("00000.000"));
+                //}
                 if (MODEntry.isHost)
                 {
                     try
@@ -203,12 +205,12 @@ namespace HostUtilities
                                                 string username = userInfo.SteamName;
                                                 string nickname = userInfo.Nickname;
                                                 string nicknamePart = string.IsNullOrEmpty(nickname) ? "" : $" [{nickname}]";
-                                                DrawText(ref rect, style, $"{user.DisplayName} (好友 {username}{nicknamePart}) {index}号位 {(latency == 0 ? "获取错误" : (latency * 1000 * 2).ToString("000") + " ms")}");
+                                                DrawText(ref rect, style, $"{(simplifyLatency.Value == true ? "" : user.DisplayName.RemoveAllTags())} (好友 {username}{nicknamePart}) {index}号位 {(latency == 0 ? "获取错误" : (latency * 1000 * 2).ToString("000") + " ms")}");
                                             }
                                         }
                                         else
                                         {
-                                            DrawText(ref rect, style, $"{user.DisplayName} {index}号位 {(latency == 0 ? "获取错误" : (latency * 1000 * 2).ToString("000") + " ms")}");
+                                            DrawText(ref rect, style, $"{(simplifyLatency.Value == true ? "" : user.DisplayName.RemoveAllTags())} {index}号位 {(latency == 0 ? "获取错误" : (latency * 1000 * 2).ToString("000") + " ms")}");
                                         }
                                         index++;
                                     }

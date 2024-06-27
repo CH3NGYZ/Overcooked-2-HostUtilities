@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using Team17.Online.Multiplayer;
 using Team17.Online.Multiplayer.Connection;
+using static PlatformUtils;
 
 
 
@@ -117,8 +118,7 @@ namespace HostUtilities
                 User user = ServerUserSystem.m_Users._items[i];
                 OnlineUserPlatformId platformID = user.PlatformID;
                 bool m_bIsLocal = user.IsLocal;
-
-                Log($"玩家{i} 昵称:{user.DisplayName} 是否本地:{m_bIsLocal} steamid:{platformID.m_steamId} 主页:https://steamcommunity.com/profiles/{platformID.m_steamId}\n\n\n--------------------------------------");
+                Log($"玩家{i} 昵称:{user.DisplayName.RemoveAllTags()} 是否本地:{m_bIsLocal} steamid:{platformID.m_steamId} 主页:https://steamcommunity.com/profiles/{platformID.m_steamId}\n\n\n--------------------------------------");
             }
             Log("--------------------------------------");
         }
@@ -135,8 +135,8 @@ namespace HostUtilities
                 processedList.Contains(steamCommunityUrlWithSplash
                 ))
             {
-                Log($"自动移除  主页: {steamCommunityUrl}  昵称: {user.DisplayName}");
-                UI_DisplayKickedUser.Add_m_Text($"自动移除  {user.DisplayName}");
+                Log($"自动移除  主页: {steamCommunityUrl}  昵称: {user.DisplayName.RemoveAllTags()}");
+                UI_DisplayKickedUser.Add_m_Text($"自动移除  {user.DisplayName.RemoveAllTags()}");
                 ServerUserSystem.RemoveUser(user, true);
                 return true;
             }
@@ -155,17 +155,17 @@ namespace HostUtilities
             {
                 User user = ServerUserSystem.m_Users._items[index];
                 bool m_bIsLocal = user.IsLocal;
-                Log($"尝试移除{index + 1}号:{user.DisplayName}");
+                Log($"尝试移除{index + 1}号:{user.DisplayName.RemoveAllTags()}");
                 if (!m_bIsLocal)
                 {
                     OnlineUserPlatformId platformID = user.PlatformID;
                     //SteamNetworking.CloseP2PSessionWithUser(platformID.m_steamId);
                     ServerUserSystem.RemoveUser(user, true);
-                    Log($"{index + 1}号移除成功:{user.DisplayName}, Steamid:{platformID.m_steamId}");
+                    Log($"{index + 1}号移除成功:{user.DisplayName.RemoveAllTags()}, Steamid:{platformID.m_steamId}");
                 }
                 else
                 {
-                    Log($"{index + 1}号移除失败:{user.DisplayName}, 本地玩家");
+                    Log($"{index + 1}号移除失败:{user.DisplayName.RemoveAllTags()}, 本地玩家");
                 }
             }
         }
@@ -180,10 +180,10 @@ namespace HostUtilities
             {
                 User user = ServerUserSystem.m_Users._items[index];
                 bool m_bIsLocal = user.IsLocal;
-                Log($"尝试移除{index + 1}号:{user.DisplayName}");
+                Log($"尝试移除{index + 1}号:{user.DisplayName.RemoveAllTags()}");
                 if (!m_bIsLocal)
                 {
-                    Log($"{index + 1} 号移除成功: {user.DisplayName} 并拉黑");
+                    Log($"{index + 1} 号移除成功: {user.DisplayName.RemoveAllTags()} 并拉黑");
 
                     OnlineUserPlatformId platformID = user.PlatformID;
                     ServerUserSystem.RemoveUser(user, true);
@@ -195,7 +195,7 @@ namespace HostUtilities
                 }
                 else
                 {
-                    Log($"{index + 1}号移除失败:{user.DisplayName}, 本地玩家");
+                    Log($"{index + 1}号移除失败:{user.DisplayName.RemoveAllTags()}, 本地玩家");
                 }
             }
         }
@@ -210,7 +210,7 @@ namespace HostUtilities
                 for (var index = 1; index < ServerUserSystem.m_Users.Count; index++)
                 {
                     User user = ServerUserSystem.m_Users._items[index];
-                    Log($"保存:{user.DisplayName}");
+                    Log($"保存:{user.DisplayName.RemoveAllTags()}");
                     OnlineUserPlatformId platformID = user.PlatformID;
                     CSteamID? csteamID = (platformID != null) ? new CSteamID?(platformID.m_steamId) : null;
                     string steamIdString = csteamID.ToString();
@@ -236,7 +236,7 @@ namespace HostUtilities
                     if (user.IsLocal != true)
                     {
 
-                        Log($"保存:{user.DisplayName}");
+                        Log($"保存:{user.DisplayName.RemoveAllTags()}");
                         OnlineUserPlatformId platformID = user.PlatformID;
                         CSteamID? csteamID = (platformID != null) ? new CSteamID?(platformID.m_steamId) : null;
                         string steamIdString = csteamID.ToString();
@@ -291,28 +291,33 @@ namespace HostUtilities
                 {
                     FastList<User> users = ServerUserSystem.m_Users;
                     User user = UserSystemUtils.FindUser(users, null, machine, engagement, TeamID.Count, User.SplitStatus.Count);
-                    if (isAutoKickUser.Value)
-                    {
-                        if (MODEntry.isInLobby)
-                        {
-                            bool isKicked = KickBanListUser(user);
-                            if (isKicked)
-                            {
-                                return;
-                            }
-                        }
-                    }
                     if (!user.IsLocal)
                     {
-                        Log($"保存:{user.DisplayName}");
-                        OnlineUserPlatformId platformID = user.PlatformID;
-                        CSteamID? csteamID = (platformID != null) ? new CSteamID?(platformID.m_steamId) : null;
-                        if (EFriendRelationship.k_EFriendRelationshipFriend == SteamFriends.GetFriendRelationship(csteamID.Value))
+                        CSteamID csteamID = user.m_PlatformID.m_steamId;
+                        if (EFriendRelationship.k_EFriendRelationshipFriend == SteamFriends.GetFriendRelationship(csteamID))
                         {
-                            string personaName = SteamFriends.GetFriendPersonaName(csteamID.Value);
-                            string nickname = SteamFriends.GetPlayerNickname(csteamID.Value);
-                            steamIDDictionary[csteamID.Value] = new SteamUserInfo(personaName, nickname);
-                        };
+                            Log($"{user.DisplayName.RemoveAllTags()} 为好友, 跳过保存和踢出");
+                            string personaName = SteamFriends.GetFriendPersonaName(csteamID);
+                            string nickname = SteamFriends.GetPlayerNickname(csteamID);
+                            steamIDDictionary[csteamID] = new SteamUserInfo(personaName, nickname);
+                            return;
+                        }
+                        if (isAutoKickUser.Value)
+                        {
+                            if (MODEntry.isInLobby)
+                            {
+                                bool isKicked = KickBanListUser(user);
+                                if (isKicked)
+                                {
+                                    return;
+                                }
+                            }
+                        }
+
+
+                        Log($"保存:{user.DisplayName.RemoveAllTags()}");
+                        OnlineUserPlatformId platformID = user.PlatformID;
+
                         string steamIdString = csteamID.ToString();
                         string steamCommunityUrl = $"steam主页链接: https://steamcommunity.com/profiles/{steamIdString}";
 
@@ -321,7 +326,7 @@ namespace HostUtilities
                         string[] autoSavedSteamIdList = new string[]
                         {
                             $"------------{formattedTime}-----------",
-                            $"游戏昵称: {user.DisplayName}",steamCommunityUrl,
+                            $"游戏昵称: {user.DisplayName.RemoveAllTags()}",steamCommunityUrl,
                             "---------------------------------------------"
                         };
                         SaveAutoSavedSteamIdList(autoSavedSteamIdList);
