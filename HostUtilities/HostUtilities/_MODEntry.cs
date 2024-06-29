@@ -58,7 +58,7 @@ namespace HostUtilities
                 ToggleArtLight.Awake();
 
                 //需要Update
-                //AddDirtyDishes.Awake();
+                AddDirtyDishes.Awake();
                 ForceHost.Awake();
                 KickUser.Awake();
                 LevelEdit.Awake();
@@ -93,7 +93,7 @@ namespace HostUtilities
         {
             try
             {
-                //AddDirtyDishes.Update();
+                AddDirtyDishes.Update();
                 ForceHost.Update();
                 KickUser.Update();
                 LevelEdit.Update();

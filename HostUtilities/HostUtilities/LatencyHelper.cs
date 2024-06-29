@@ -220,7 +220,7 @@ namespace HostUtilities
         [HarmonyPatch(typeof(ClientUserSystem), "AddUser")]
         public static void ClientUserSystem_OnUsersChanged_Postfix()
         {
-            Log("ClientUserSystem_OnUsersChanged");
+            //Log("ClientUserSystem_OnUsersChanged");
             clientFriendsMessage = string.Empty;
             FastList<User> clientUserSystem = ClientUserSystem.m_Users;
             for (int i = 0; i < clientUserSystem.Count; i++)
