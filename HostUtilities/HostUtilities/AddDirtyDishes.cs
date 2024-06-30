@@ -94,7 +94,14 @@ namespace HostUtilities
                     MODEntry.ShowWarningDialog("请在街机中使用此功能。");
                     return;
                 }
+
                 int cost = 500;
+                if (FixDoubleServing.levelName.Contains("Night_3_3"))
+                {
+                    Log("麻团3-3, 脏盘子不限制");
+                    cost = 0;
+                }
+
                 int score = GetScore();
                 if (score == -9999999)
                 {

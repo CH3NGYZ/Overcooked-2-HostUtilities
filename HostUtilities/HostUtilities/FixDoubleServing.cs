@@ -14,7 +14,7 @@ namespace HostUtilities
         public static ConfigEntry<bool> isDoubleServingBanned;
         public static ConfigEntry<bool> isOneRecipeDoubleServingAllowed;
         public static bool isOnlyOneRecipe = false;
-        public static bool isSushi1_1 = false;
+        public static string levelName = string.Empty;
         public static void Awake()
         {
             isDoubleServingBanned = MODEntry.Instance.Config.Bind("01-功能开关", "01-00-禁止卡盘", true, "禁止卡盘子");
@@ -77,7 +77,6 @@ namespace HostUtilities
         {
             try
             {
-                isSushi1_1 = false;
                 GameObject[] allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
                 foreach (GameObject obj in allObjects)
                 {
@@ -90,10 +89,7 @@ namespace HostUtilities
                             if (levelConfig != null)
                             {
                                 Log($"本关关卡名称: {levelConfig.name}");
-                                if (levelConfig.name.Contains("Sushi_1_1"))
-                                {
-                                    isSushi1_1 = true;
-                                }
+                                levelName = levelConfig.name;
                             }
                         }
                     }
@@ -113,7 +109,7 @@ namespace HostUtilities
                     var item = __instance.m_recipes.m_recipes[i];
                     Log($"本关菜单索引: {i}, 菜单名: {item.m_order.name}");
                 }
-                if (isSushi1_1)
+                if (levelName.Contains("Sushi_1_1"))
                 {
                     isOnlyOneRecipe = true;
                 }
