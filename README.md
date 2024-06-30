@@ -1,6 +1,7 @@
 # MOD 编写不易,您的支持是我最大的动力,加群可获取技术支持
 
-![1](https://cdn.jsdelivr.net/gh/CH3NGYZ/Overcooked-2-HostUtilities@main/%E8%B5%9E%E8%B5%8F%E7%A0%81.jpg)
+![1](https://github.com/CH3NGYZ/Overcooked-2-HostUtilities/assets/56500405/6a59b343-3a14-47e1-8e34-12b6f95daa86)
+
 
 总：[![Download](https://img.shields.io/github/downloads/CH3NGYZ/Overcooked-2-HostUtilities/total)](https://github.com/CH3NGYZ/Overcooked-2-HostUtilities/releases)
 
